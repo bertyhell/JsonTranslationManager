@@ -1,0 +1,43 @@
+﻿<controls:MetroWindow x:Class="JsonTranslationManager.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:jsonTranslationManager="clr-namespace:JsonTranslationManager"
+        xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
+        mc:Ignorable="d" 
+        d:DataContext="{d:DesignInstance Type={x:Type jsonTranslationManager:MainController}}"
+        Title="Json Translations" Height="413" Width="703" Icon="icon.ico">
+	<Grid>
+		<Grid.Resources>
+			<jsonTranslationManager:Int2ColorConverter x:Key="Int2ColorConverter" />
+			<!--<Style TargetType="DataGridRow" x:Name="DataGridRowColorStyle">
+				<Setter Property="Background" Value="{Binding Score, Converter={StaticResource Int2ColorConverter}}" />
+			</Style>-->
+		</Grid.Resources>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition/>
+			<ColumnDefinition Width="Auto"/>
+		</Grid.ColumnDefinitions>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="50"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+		<TextBox Text="{Binding SelectedFolder}" VerticalAlignment="Center" Margin="10 10 5 0" Height="40" VerticalContentAlignment="Center" />
+
+
+		<Button Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0 10 110 0" Click="BrowseButtonClick" Width="40" ToolTip="Browse" >
+			<Image Source="img/browse.png" Width="23"></Image>
+		</Button>
+		<Button Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0 10 60 0" Click="RefreshButtonClick" Width="40" ToolTip="Refresh" >
+			<Image Source="img/refresh.png" Width="23"></Image>
+		</Button>
+		<Button Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right"  VerticalAlignment="Stretch" Margin="0 10 10 0" Click="SaveButtonClick" Width="40" ToolTip="Save" >
+			<Image Source="img/save.png" Width="23"></Image>
+		</Button>
+
+		<TabControl Margin="0 10 0 0" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="TabControl">
+		</TabControl>
+
+	</Grid>
+</controls:MetroWindow>
