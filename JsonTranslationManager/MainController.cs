@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Windows;
 using JsonTranslationManager.Annotations;
 using JsonTranslationManager.LanguageService;
+using JsonTranslationManager.Properties;
 using Newtonsoft.Json;
 
 namespace JsonTranslationManager
@@ -23,7 +26,7 @@ namespace JsonTranslationManager
 		{
 			_mainWindow = mainWindow;
 			TranslationFiles = new List<TranslationFile>();
-			_selectedFolder = @"C:\Dropbox\personal\JsonTranslationManager\JsonTranslationMananger\JsonTranslationManager\lang";
+			_selectedFolder = Settings.Default.SelectedFolder;
 			_languageServiceClient = new LanguageServiceClient();
 		}
 
@@ -34,7 +37,9 @@ namespace JsonTranslationManager
 			{
 				if (value == _selectedFolder) return;
 				_selectedFolder = value;
-				RefreshTranslationFiles();
+				Settings.Default.SelectedFolder = value;
+				Settings.Default.Save();
+				RefreshTranslationFiles(true);
 				OnPropertyChanged();
 			}
 		}
@@ -52,7 +57,7 @@ namespace JsonTranslationManager
 
 		public bool ChangesPending { get; set; }
 
-		public void RefreshTranslationFiles()
+		public void RefreshTranslationFiles(bool showDirNotFoundError = false)
 		{
 			TranslationFiles.Clear();
 			if (Directory.Exists(SelectedFolder))
@@ -66,7 +71,8 @@ namespace JsonTranslationManager
 					StreamReader reader = new StreamReader(new FileStream(translationFile.FullName, FileMode.Open));
 					string jsonString = reader.ReadToEnd();
 					Dictionary<string, string> jsonPairs = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonString);
-					List<TranslationPair> translationPairs = jsonPairs.Select(pair => new TranslationPair { Key = pair.Key, Value = pair.Value }).ToList();
+					ObservableCollection<TranslationPair> translationPairs = new ObservableCollection<TranslationPair>(
+						jsonPairs.Select(pair => new TranslationPair { Key = pair.Key, Value = pair.Value }));
 					string fileName = translationFile.Name.Substring(0, translationFile.Name.Length - translationFile.Extension.Length);
 
 					TranslationFiles.Add(new TranslationFile { Name = fileName, Path = translationFile.FullName, TranslationPairs = translationPairs });
@@ -78,7 +84,7 @@ namespace JsonTranslationManager
 			}
 			else
 			{
-				MessageBox.Show("The selected folder wasn't found.");
+				if (showDirNotFoundError) MessageBox.Show("The selected folder wasn't found.");
 			}
 		}
 
@@ -92,13 +98,13 @@ namespace JsonTranslationManager
 				{
 					if (!uniqueTranslationKeys.ContainsKey(translationPair.Key))
 					{
-						uniqueTranslationKeys.Add(translationPair.Key, new Tuple<string, string>(translationFile.Name,translationPair.Value));
+						uniqueTranslationKeys.Add(translationPair.Key, new Tuple<string, string>(translationFile.Name, translationPair.Value));
 					}
 				}
 			}
 
 			//determine score for every key and add missing keys to respective files
-			foreach (KeyValuePair<string ,Tuple<string, string>> uniqueTranslationPair in uniqueTranslationKeys)
+			foreach (KeyValuePair<string, Tuple<string, string>> uniqueTranslationPair in uniqueTranslationKeys)
 			{
 				double score = (double)TranslationFiles.Count(tf => tf.TranslationPairs.Any(tp => tp.Key == uniqueTranslationPair.Key && !string.IsNullOrWhiteSpace(tp.Value))) / TranslationFiles.Count();
 				foreach (TranslationFile translationFile in TranslationFiles)
@@ -138,7 +144,7 @@ namespace JsonTranslationManager
 
 			foreach (TranslationFile translationFile in TranslationFiles)
 			{
-				translationFile.TranslationPairs = translationFile.TranslationPairs.OrderBy(tp => tp.Score).ThenBy(tp => tp.Key).ToList();
+				translationFile.TranslationPairs = new ObservableCollection<TranslationPair>(translationFile.TranslationPairs.OrderBy(tp => tp.Score).ThenBy(tp => tp.Key));
 			}
 		}
 
@@ -156,12 +162,13 @@ namespace JsonTranslationManager
 			foreach (TranslationFile translationFile in TranslationFiles)
 			{
 				StreamWriter streamWriter = new StreamWriter(new FileStream(translationFile.Path, FileMode.Truncate));
-				streamWriter.Write("{");
+				streamWriter.WriteLine("{");
 				foreach (TranslationPair translationPair in translationFile.TranslationPairs)
 				{
-					streamWriter.Write("\"" + translationPair.Key + "\":\"" + translationPair.Value + "\",");
+					streamWriter.WriteLine("\"" + translationPair.Key + "\":\"" + translationPair.Value + "\"" +
+						(translationPair == translationFile.TranslationPairs.Last() ? "" : ","));
 				}
-				streamWriter.Write("}");
+				streamWriter.WriteLine("}");
 				streamWriter.Flush();
 				streamWriter.Close();
 			}

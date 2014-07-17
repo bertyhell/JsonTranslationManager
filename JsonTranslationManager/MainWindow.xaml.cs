@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -23,8 +24,6 @@ namespace JsonTranslationManager
 			InitializeComponent();
 
 			DataContext = _controller = new MainController(this);
-
-			_controller.RefreshTranslationFiles();
 		}
 
 		private void BrowseButtonClick(object sender, RoutedEventArgs e)
@@ -52,6 +51,8 @@ namespace JsonTranslationManager
 										AutoGenerateColumns = false,
 										RowStyle = rowStyle
 									};
+
+				translationFile.TranslationPairs.CollectionChanged += TranslationPairsCollectionChanged;
 
 				dataGrid.CurrentCellChanged += DataGridOnCurrentCellChanged;
 
@@ -98,20 +99,51 @@ namespace JsonTranslationManager
 															Binding = new Binding("Key")
 														};
 				dataGrid.Columns.Add(textColumn);
-				//todo add country flags
-
 				dataGrid.Columns.Add(new DataGridTextColumn
 					{
 						Header = "Value",
 						Width = new DataGridLength(1, DataGridLengthUnitType.Star),
 						Binding = new Binding("Value")
 					});
-
+				//data
 				foreach (DataGridColumn column in dataGrid.Columns)
 				{
 					column.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
 				}
 				tab.Content = dataGrid;
+			}
+		}
+
+		void TranslationPairsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			switch (e.Action)
+			{
+				case NotifyCollectionChangedAction.Remove:
+					{
+						TranslationPair deletedTranslationPair = (TranslationPair)e.OldItems[e.OldStartingIndex];
+
+						//remove items from other collections
+						foreach (TranslationFile translationFile in _controller.TranslationFiles)
+						{
+							TranslationPair toBeRemovedTransPair = translationFile.TranslationPairs.FirstOrDefault(tp => tp.Key == deletedTranslationPair.Key);
+							if (toBeRemovedTransPair != null) translationFile.TranslationPairs.Remove(toBeRemovedTransPair);
+						}
+					}
+					break;
+				case NotifyCollectionChangedAction.Add:
+					{
+						TranslationPair addedTranslationPair = (TranslationPair)e.NewItems[e.NewStartingIndex];
+
+						//remove items from other collections
+						foreach (TranslationFile translationFile in _controller.TranslationFiles)
+						{
+							if (translationFile.TranslationPairs.All(tp => tp.Key != addedTranslationPair.Key))
+							{
+								translationFile.TranslationPairs.Add(new TranslationPair { Generated = true, Key = addedTranslationPair.Key, Value = "", Score = 0 });
+							}
+						}
+					}
+					break;
 			}
 		}
 
@@ -140,7 +172,7 @@ namespace JsonTranslationManager
 				}
 				else if (result == MessageBoxResult.No)
 				{
-					_controller.RefreshTranslationFiles();
+					_controller.RefreshTranslationFiles(true);
 					MessageBox.Show("Refreshed " + _controller.TranslationFiles.Count + " files.");
 				}
 			}
@@ -150,6 +182,11 @@ namespace JsonTranslationManager
 		{
 			_controller.SaveChangesToFiles();
 			MessageBox.Show("Saved " + _controller.TranslationFiles.Count + " files.");
+		}
+
+		private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
+		{
+			_controller.RefreshTranslationFiles();
 		}
 	}
 }

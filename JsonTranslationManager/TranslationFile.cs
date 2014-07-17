@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.ObjectModel;
 
 namespace JsonTranslationManager
 {
@@ -9,6 +6,6 @@ namespace JsonTranslationManager
 	{
 		public string Name { get; set; }
 		public string Path { get; set; }
-		public List<TranslationPair> TranslationPairs { get; set; }
+		public ObservableCollection<TranslationPair> TranslationPairs { get; set; }
 	}
 }
